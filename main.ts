@@ -1,90 +1,40 @@
-import { serve } from "https://deno.land/std@0.120.0/http/server.ts";
-import urlcat from 'https://deno.land/x/urlcat@v2.0.4/src/index.ts';
-import "https://deno.land/x/dotenv@v3.2.0/load.ts";
+import { serve, sleep } from "./deps.ts";
+import { sendMessage } from "./messenger.ts";
+import * as moodle from "./moodle.ts";
 
-const MOODLE_TOKEN = Deno.env.get("MOODLE_TOKEN");
 const FACEBOOK_TOKEN = Deno.env.get("FACEBOOK_TOKEN");
-if (!FACEBOOK_TOKEN || !MOODLE_TOKEN) throw new Error("token not found");
+if (!FACEBOOK_TOKEN) throw new Error("facebook token not found");
 
-const BASE_URL = "http://e-learning.hcmut.edu.vn";
-const API_PATH = "/webservice/rest/server.php";
-const DEFAULT_ARGS = {
-  moodlewsrestformat: "json",
-  wstoken: MOODLE_TOKEN,
-} as const;
+const CATEGORIES = [
+  "Học kỳ II năm học 2021-2022 (Semester 2 - Academic year 2021-2022)",
+  "Học kỳ I năm học 2021-2022 (Semester 1 - Academic year 2021-2022)",
+  "Hoạt động Sinh viên  (Student Activities)",
+];
 
-
-const USERID = "7177809602236804";
-
-const COURSEIDS = [
-  115347,
-  115338,
-  113383,
-  111266,
-  115353,
-  111305,
-  116485,
-  116483,
-  113405,
-  111319,
-  116488,
-  115364,
-  113411,
-  111323,
-  116960,
-  116943,
-  112546,
-  112506
-]
-
-async function handler(req: Request): Promise<Response> {
-  if (req.url.endsWith("hola")) return other_handler(req);
-
+async function handler(_: Request): Promise<Response> {
+  // previous hours FIXME:
   const timestamp = Math.round(+new Date() / 1000 - 60 * 60);
-  let res = await Promise.allSettled(COURSEIDS.map(courseid =>
-    fetch(urlcat(BASE_URL, API_PATH, {
-      ...DEFAULT_ARGS,
-      wsfunction: "core_course_get_updates_since",
-      courseid,
-      since: timestamp
-    })).then(res => res.json()).then(json => ({ ...json, courseid }))
-  ))
-  res = res.flatMap(json => {
-    if (json.status == "rejected") return undefined;
-    let instances = json.value.instances;
-    if (instances.length != 0) {
-      instances.push(json.value.courseid);
-    }
-    return instances;
-  });
-  if (res.length != 0) {
-    const body = {
-      recipient: {
-        id: USERID,
-      },
-      message: {
-        text: JSON.stringify(res)
+  let courses = await moodle.getEnrolledCourses("inprogress");
+  courses.push(...await moodle.getEnrolledCourses("future"));
+  courses = courses.filter((course) => CATEGORIES.includes(course.coursecategory));
+  console.log(courses.length);
+  for (const course of courses) {
+    const courseid = course.id;
+    const instances = await moodle.getUpdatesSince(courseid, timestamp);
+    for (const instance of instances) {
+      if (instance.contextlevel == "module") {
+        const module = await moodle.getCourseModule(instance.id);
+        const message = `- ${module.name} at ${moodle.getModuleUrl(module)
+          } from ${moodle.getCourseUrl(courseid)}`;
+        await sendMessage(message);
+      } else {
+        await sendMessage(`- unknown instance, ${JSON.stringify(instance)}`);
       }
     }
-    return await fetch(urlcat("https://graph.facebook.com/v12.0/me/messages", {
-      access_token: FACEBOOK_TOKEN,
-    }), {
-      method: "POST",
-      headers: {
-        'Content-Type': "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+    sleep(1);
   }
-  return new Response("all is well");
-}
 
-async function other_handler(req: Request): Promise<Response> {
-  return fetch(urlcat(BASE_URL, API_PATH, {
-    ...DEFAULT_ARGS,
-    wsfunction: "get_courses_by_field",
-    id: 116485,
-  }))
+  return new Response("hello world");
 }
 
 console.log("Listening on http://localhost:8000");
