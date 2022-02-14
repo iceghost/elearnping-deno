@@ -11,27 +11,38 @@ const CATEGORIES = [
   "Hoạt động Sinh viên  (Student Activities)",
 ];
 
+const IntlDate = new Intl.DateTimeFormat("vi-VN", { dateStyle: 'full', timeStyle: 'long' });
+const IntlList = new Intl.ListFormat("vi-VN");
+
 async function handler(_: Request): Promise<Response> {
-  // previous hours FIXME:
+  // previous hours
   const timestamp = Math.round(+new Date() / 1000 - 60 * 60);
   let courses = await moodle.getEnrolledCourses("inprogress");
   courses.push(...await moodle.getEnrolledCourses("future"));
-  courses = courses.filter((course) => CATEGORIES.includes(course.coursecategory));
-  console.log(courses.length);
+  courses = courses.filter((course) =>
+    CATEGORIES.includes(course.coursecategory)
+  );
+  // console.log(courses.length);
   for (const course of courses) {
     const courseid = course.id;
     const instances = await moodle.getUpdatesSince(courseid, timestamp);
     for (const instance of instances) {
       if (instance.contextlevel == "module") {
         const module = await moodle.getCourseModule(instance.id);
-        const message = `- ${module.name} at ${moodle.getModuleUrl(module)
-          } from ${moodle.getCourseUrl(courseid)}`;
+
+        const timestamp = instance.updates.map((detail) =>
+          IntlDate.format(new Date(detail.timeupdated * 1000))
+        );
+
+        const message = `- ${module.name}\n\nModule: ${moodle.getModuleUrl(module)
+          }\n\nCourse: ${moodle.getCourseUrl(courseid)}\n\n${IntlList.format(timestamp)
+          }`;
         await sendMessage(message);
       } else {
         await sendMessage(`- unknown instance, ${JSON.stringify(instance)}`);
       }
     }
-    sleep(1);
+    sleep(0.333);
   }
 
   return new Response("hello world");
