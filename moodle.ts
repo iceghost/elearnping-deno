@@ -76,7 +76,8 @@ interface UpdateInstance {
 
 interface UpdateDetail {
   name: string;
-  timeupdated: number;
+  timeupdated?: number;
+  itemids?: number[];
 }
 
 interface Module {

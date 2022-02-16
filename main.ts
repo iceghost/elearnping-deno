@@ -9,8 +9,9 @@ const CATEGORIES = [
 ];
 
 const IntlDate = new Intl.DateTimeFormat("vi-VN", {
-  dateStyle: "full",
-  timeStyle: "long",
+  dateStyle: "short",
+  timeStyle: "short",
+  timeZone: "Asia/Ho_Chi_Minh"
 });
 const IntlList = new Intl.ListFormat("vi-VN");
 
@@ -22,31 +23,41 @@ async function handler(_: Request): Promise<Response> {
   courses = courses.filter((course) =>
     CATEGORIES.includes(course.coursecategory)
   );
+  const checked_courses: number[] = [];
   // console.log(courses.length);
+
   for (const course of courses) {
+    if (checked_courses.includes(course.id)) continue;
+    checked_courses.push(course.id);
+
+    console.log("Examining course", course.id);
+
     const courseid = course.id;
     const instances = await moodle.getUpdatesSince(courseid, timestamp);
+    // console.log(JSON.stringify(instances, null, 2));
     for (const instance of instances) {
+      console.log("Found instance", instance.id);
       if (instance.contextlevel == "module") {
         const module = await moodle.getCourseModule(instance.id);
 
         const timestamp = instance.updates.map((detail) =>
-          IntlDate.format(new Date(detail.timeupdated * 1000))
+          detail.timeupdated
+            ? IntlDate.format(new Date(detail.timeupdated * 1000))
+            : ""
         );
 
-        const message = `- ${module.name}\n\nModule: ${
-          moodle.getModuleUrl(module)
-        }\n\nCourse: ${moodle.getCourseUrl(courseid)}\n\n${
-          IntlList.format(timestamp)
-        }`;
+        const message = `- ${module.name}\n\nModule: ${moodle.getModuleUrl(module)
+          }\n\nCourse: ${moodle.getCourseUrl(courseid)}\n\n${IntlList.format(timestamp)
+          }`;
         await sendMessage(message);
       } else {
         await sendMessage(`- unknown instance, ${JSON.stringify(instance)}`);
       }
+      console.log("Sent message for instance", instance.id);
     }
-    sleep(0.333);
+    await sleep(0.333);
   }
-
+  console.log("Done checking");
   return new Response("hello world");
 }
 
