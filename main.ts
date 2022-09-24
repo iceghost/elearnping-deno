@@ -2,11 +2,11 @@ import { serve, sleep } from "./deps.ts";
 import { sendMessage } from "./messenger.ts";
 import * as moodle from "./moodle.ts";
 
-const CATEGORIES = [
-  "Học kỳ II năm học 2021-2022 (Semester 2 - Academic year 2021-2022)",
-  "Học kỳ I năm học 2021-2022 (Semester 1 - Academic year 2021-2022)",
-  "Hoạt động Sinh viên  (Student Activities)",
-];
+// const CATEGORIES = [
+//   "Học kỳ II năm học 2021-2022 (Semester 2 - Academic year 2021-2022)",
+//   "Học kỳ I năm học 2021-2022 (Semester 1 - Academic year 2021-2022)",
+//   "Hoạt động Sinh viên  (Student Activities)",
+// ];
 
 const IntlDate = new Intl.DateTimeFormat("vi-VN", {
   dateStyle: "short",
@@ -20,9 +20,9 @@ async function handler(_: Request): Promise<Response> {
   const timestamp = Math.round(+new Date() / 1000 - 60 * 60);
   let courses = await moodle.getEnrolledCourses("inprogress");
   courses.push(...await moodle.getEnrolledCourses("future"));
-  courses = courses.filter((course) =>
-    CATEGORIES.includes(course.coursecategory)
-  );
+  // courses = courses.filter((course) =>
+  //   CATEGORIES.includes(course.coursecategory)
+  // );
   const checked_courses: number[] = [];
   // console.log(courses.length);
 
