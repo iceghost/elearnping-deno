@@ -3,7 +3,7 @@ import { urlcat } from "./deps.ts";
 const MOODLE_TOKEN = Deno.env.get("MOODLE_TOKEN");
 if (!MOODLE_TOKEN) throw new Error("moodle token not found");
 
-const BASE_URL = "http://e-learning.hcmut.edu.vn";
+const BASE_URL = "https://e-learning.hcmut.edu.vn";
 const API_PATH = "/webservice/rest/server.php";
 const DEFAULT_ARGS = {
   moodlewsrestformat: "json",
