@@ -46,9 +46,9 @@ async function handler(_: Request): Promise<Response> {
             : ""
         );
 
-        const message = `- ${module.name}\n\nModule: ${moodle.getModuleUrl(module)
+        const message = `${module.name}\n\nModule: ${moodle.getModuleUrl(module)
           }\n\nCourse: ${moodle.getCourseUrl(courseid)}\n\n${IntlList.format(timestamp)
-          }`;
+          }\n\n{JSON.stringify(instance.updates.map(detail => detail.name))}`;
         await sendMessage(message);
       } else {
         await sendMessage(`- unknown instance, ${JSON.stringify(instance)}`);
