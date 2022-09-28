@@ -8,6 +8,8 @@ import * as moodle from "./moodle.ts";
 //   "Hoạt động Sinh viên  (Student Activities)",
 // ];
 
+const EXCLUDED_MODULES = [23993];
+
 const IntlDate = new Intl.DateTimeFormat("vi-VN", {
   dateStyle: "short",
   timeStyle: "short",
@@ -38,6 +40,7 @@ async function handler(_: Request): Promise<Response> {
     for (const instance of instances) {
       console.log("Found instance", instance.id);
       if (instance.contextlevel == "module") {
+        if (EXCLUDED_MODULES.includes(instance.id)) continue;
         const module = await moodle.getCourseModule(instance.id);
 
         const timestamp = instance.updates.map((detail) =>
